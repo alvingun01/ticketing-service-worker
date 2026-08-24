@@ -1,0 +1,52 @@
+services:
+  postgres:
+    image: postgres:15-alpine
+    container_name: ticketing-postgres
+    restart: unless-stopped
+    environment:
+      POSTGRES_USER: ${DB_USERNAME:-postgres}
+      POSTGRES_PASSWORD: ${DB_PASSWORD:?DB_PASSWORD must be set}
+      POSTGRES_DB: ${DB_DATABASE:-ticketing}
+    ports:
+      # Published so VM2's worker can reach it; the GCP firewall rule
+      # `allow-ticketing-worker-to-datastores` is what actually gates access.
+      - "5432:5432"
+    volumes:
+      - pgdata:/var/lib/postgresql/data
+
+  redis:
+    image: redis:7-alpine
+    container_name: ticketing-redis
+    restart: unless-stopped
+    ports:
+      # Published so VM2's worker can reach it; gated by the same firewall
+      # rule. NOTE: Redis has no auth in the app, so never open 6379 to the
+      # world — only to VM2's external IP.
+      - "6379:6379"
+
+  api:
+    image: ${IMAGE_REPO:?IMAGE_REPO must be set}:${API_TAG:-api}
+    container_name: ticketing-api
+    restart: unless-stopped
+    environment:
+      PORT: 8000
+      DB_HOST: postgres
+      DB_PORT: 5432
+      DB_USERNAME: ${DB_USERNAME:-postgres}
+      DB_PASSWORD: ${DB_PASSWORD:?DB_PASSWORD must be set}
+      DB_DATABASE: ${DB_DATABASE:-ticketing}
+      REDIS_HOST: redis
+      REDIS_PORT: 6379
+      RESERVATION_TTL_SECONDS: ${RESERVATION_TTL_SECONDS:-60}
+      CHECKOUT_HOLD_SECONDS: ${CHECKOUT_HOLD_SECONDS:-60}
+      STRIPE_SECRET_KEY: ${STRIPE_SECRET_KEY:?STRIPE_SECRET_KEY must be set}
+      STRIPE_WEBHOOK_SECRET: ${STRIPE_WEBHOOK_SECRET:-}
+      CLIENT_URL: ${CLIENT_URL:-http://localhost:4242}
+    ports:
+      - "8000:8000"
+    depends_on:
+      - postgres
+      - redis
+
+volumes:
+  pgdata:

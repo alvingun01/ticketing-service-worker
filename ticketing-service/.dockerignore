@@ -1,0 +1,12 @@
+node_modules
+dist
+coverage
+test
+.git
+.gitignore
+.env
+*.log
+.claude
+# Deploy config lives on the host, not in the image — and contains real secrets
+# (deploy/*/.env) that must never be baked into the Docker Hub image.
+deploy
