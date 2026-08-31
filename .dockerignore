@@ -1,0 +1,7 @@
+ticketing-service/node_modules
+ticketing-service/dist
+ticketing-service/.git
+.git
+.github
+deploy
+.DS_Store

@@ -1,0 +1,22 @@
+services:
+  reservation-worker:
+    image: ${IMAGE_REPO:?IMAGE_REPO must be set}:${WORKER_TAG:-worker}
+    container_name: ticketing-reservation-worker
+    restart: unless-stopped
+    environment:
+      # This VM has no datastores of its own: it points at VM1's Postgres/Redis
+      # over VM1's external IP (locked to this VM by GCP firewall).
+      DB_HOST: ${VM1_PUBLIC_IP:?VM1_PUBLIC_IP must be set}
+      DB_PORT: 5432
+      DB_USERNAME: ${DB_USERNAME:-postgres}
+      DB_PASSWORD: ${DB_PASSWORD:?DB_PASSWORD must be set}
+      DB_DATABASE: ${DB_DATABASE:-ticketing}
+      # The API owns schema sync; this process must never run TypeORM DDL.
+      DB_SYNCHRONIZE: "false"
+      REDIS_HOST: ${VM1_PUBLIC_IP:?VM1_PUBLIC_IP must be set}
+      REDIS_PORT: 6379
+      RESERVATION_TTL_SECONDS: ${RESERVATION_TTL_SECONDS:-60}
+      CHECKOUT_HOLD_SECONDS: ${CHECKOUT_HOLD_SECONDS:-60}
+      # The worker expires Stripe Checkout sessions, so it needs the secret
+      # key too — but never the webhook secret.
+      STRIPE_SECRET_KEY: ${STRIPE_SECRET_KEY:?STRIPE_SECRET_KEY must be set}
